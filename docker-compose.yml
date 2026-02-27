@@ -8,11 +8,10 @@ services:
     command: 
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -37,16 +36,16 @@ services:
       sh -c "
       while true; do
         echo 'Starting backup...';
-        mysqldump -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} \
+        mysqldump -h mysql -uroot -p${MYSQL_ROOT_PASSWORD} \
         --single-transaction \
         --routines \
         --triggers \
         --events \
-        price_db > /backup/price_db_backup_$(date +%F_%H-%M-%S).sql;
+        > /backup/price_db_backup_$(date +%F_%H-%M-%S).sql;
         echo 'Backup finished. Next backup in 24 hours.';
         sleep 86400;
       done
-      "        
+      "
 
   phpmyadmin:
     image: phpmyadmin
