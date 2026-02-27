@@ -11,13 +11,15 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: price_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: 1234
+      # MYSQL_USER: appuser
+      # MYSQL_PASSWORD: 1234
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf     # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
+      - ./mysql/log:/var/log/mysql                  # เก็บ slow query log ออกมานอก container
 
   phpmyadmin:
     image: phpmyadmin
