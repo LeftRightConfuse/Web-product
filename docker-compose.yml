@@ -9,24 +9,26 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: price_db
-      # MYSQL_USER: appuser
-      # MYSQL_PASSWORD: 1234
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf     # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
-      - ./mysql/log:/var/log/mysql                  # เก็บ slow query log ออกมานอก container
+      - ./mysql/logs:/var/log/mysql                  # เก็บ slow query log ออกมานอก container
   
   backup:
     image: mysql:8.0
     container_name: db_backup
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     depends_on:
       - mysql
     volumes:
@@ -35,7 +37,7 @@ services:
       sh -c "
       while true; do
         echo 'Starting backup...';
-        mysqldump -h mysql -u root -proot \
+        mysqldump -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} \
         --single-transaction \
         --routines \
         --triggers \
