@@ -3,7 +3,7 @@ version: "3.9"
 services:
 
   mysql:
-    image: mysql:8
+    image: mysql:8.0
     restart: always
     command: 
       --character-set-server=utf8mb4
@@ -20,6 +20,31 @@ services:
       - ./mysql:/docker-entrypoint-initdb.d
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf     # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
       - ./mysql/log:/var/log/mysql                  # เก็บ slow query log ออกมานอก container
+  
+  backup:
+    image: mysql:8.0
+    container_name: db_backup
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - mysql
+    volumes:
+      - ./backup:/backup
+    entrypoint: >
+      sh -c "
+      while true; do
+        echo 'Starting backup...';
+        mysqldump -h mysql -u root -proot \
+        --single-transaction \
+        --routines \
+        --triggers \
+        --events \
+        price_db > /backup/price_db_backup_$(date +%F_%H-%M-%S).sql;
+        echo 'Backup finished. Next backup in 24 hours.';
+        sleep 86400;
+      done
+      "        
 
   phpmyadmin:
     image: phpmyadmin
