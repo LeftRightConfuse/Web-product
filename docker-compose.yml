@@ -1,12 +1,10 @@
 version: "3.9"
 
 services:
-
   mysql:
     image: mysql:8.0
     restart: always
-    command: 
-      --character-set-server=utf8mb4
+    command: --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -18,9 +16,15 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
-      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf     # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
-      - ./mysql/logs:/var/log/mysql                  # เก็บ slow query log ออกมานอก container
-  
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
+      - ./mysql/logs:/var/log/mysql # เก็บ slow query log ออกมานอก container
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   backup:
     image: mysql:8.0
     container_name: db_backup
@@ -46,7 +50,7 @@ services:
         echo 'Backup finished. Next backup in 24 hours.';
         sleep 86400;
       done
-      "        
+      "
 
   phpmyadmin:
     image: phpmyadmin
@@ -61,10 +65,13 @@ services:
   backend:
     build: ./backend
     ports:
-    - "5000:5000"
+      - "5001:5000"
     restart: always
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
 
   frontend:
     build: ./frontend
