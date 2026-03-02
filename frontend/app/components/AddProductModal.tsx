@@ -2,32 +2,67 @@
 
 import { useState } from "react";
 import { Product } from "../types/product";
-import ProductCard from "./ProductCard";
+import { createProduct } from "../services/productService";
 
 type Props = {
   onClose: () => void;
   onAdd: (product: Product) => void;
 };
 
+const categories = [
+  { id: 1, en: "Electronics" },
+  { id: 2, en: "Appliances" },
+  { id: 3, en: "Furniture" },
+  { id: 4, en: "Fashion" },
+  { id: 5, en: "Toys & Games" },
+  { id: 6, en: "Books & Learning" },
+  { id: 7, en: "Beauty & Personal Care" },
+  { id: 8, en: "Food & Beverages" },
+  { id: 9, en: "Sports & Outdoor" },
+];
+
 export default function AddProductModal({ onClose, onAdd }: Props) {
-  const [step, setStep] = useState<"form" | "preview">("form");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState(0);
+  const [typeId, setTypeId] = useState(1);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const [formData, setFormData] = useState({
-    itemName: "",
-    description: "",
-    price: 0,
-    image_url: "",
-    category: "",
-  });
+  const handleSubmit = async () => {
+    if (!imageFile) {
+      alert("Please select an image");
+      return;
+    }
 
-  const handleConfirm = () => {
-    const newProduct: Product = {
-      id: Date.now(),
-      ...formData,
-    };
+    try {
+      const formData = new FormData();
 
-    onAdd(newProduct);
-    onClose();
+      formData.append("image", imageFile);
+      formData.append("name", name);
+      formData.append("description", description);
+      formData.append("price", price.toString());
+      formData.append("type_id", typeId.toString());
+
+      const result = await createProduct(formData);
+
+      const selected = categories.find((c) => c.id === typeId);
+
+      const newProduct: Product = {
+        id: result.id || Date.now(),
+        itemName: name,
+        description,
+        price,
+        image_url: result.image_url || "", // backend ควรส่งกลับมา
+        category: selected?.en || "Other",
+        type_id: typeId,
+      };
+
+      onAdd(newProduct);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed");
+    }
   };
 
   return (
@@ -35,105 +70,66 @@ export default function AddProductModal({ onClose, onAdd }: Props) {
       <div className="bg-gray-900 p-8 rounded-2xl w-full max-w-lg border border-gray-700 space-y-4">
 
         <h2 className="text-2xl font-bold text-center">
-          {step === "form" ? "เพิ่มสินค้าใหม่" : "Preview สินค้า"}
+          Add New Product
         </h2>
 
-        {step === "form" && (
-          <>
-            <input
-              type="text"
-              placeholder="ชื่อสินค้า"
-              className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700"
-              value={formData.itemName}
-              onChange={(e) =>
-                setFormData({ ...formData, itemName: e.target.value })
-              }
-            />
+        <input
+          type="text"
+          placeholder="Product Name"
+          className="w-full p-3 rounded-lg bg-gray-800"
+          onChange={(e) => setName(e.target.value)}
+        />
 
-            <input
-              type="text"
-              placeholder="รายละเอียดสินค้า"
-              className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
+        <input
+          type="text"
+          placeholder="Description"
+          className="w-full p-3 rounded-lg bg-gray-800"
+          onChange={(e) => setDescription(e.target.value)}
+        />
 
-            <input
-              type="number"
-              placeholder="ราคา (บาท)"
-              className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData({ ...formData, price: Number(e.target.value) })
-              }
-            />
+        <input
+          type="number"
+          placeholder="Price"
+          className="w-full p-3 rounded-lg bg-gray-800"
+          onChange={(e) => setPrice(Number(e.target.value))}
+        />
 
-            <input
-              type="text"
-              placeholder="URL รูปภาพ"
-              className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700"
-              value={formData.image_url}
-              onChange={(e) =>
-                setFormData({ ...formData, image_url: e.target.value })
-              }
-            />
+        {/* 🔥 File Upload */}
+        <input
+          type="file"
+          accept="image/*"
+          className="w-full p-3 rounded-lg bg-gray-800"
+          onChange={(e) =>
+            setImageFile(e.target.files ? e.target.files[0] : null)
+          }
+        />
 
-            <input
-              type="text"
-              placeholder="หมวดหมู่ (เช่น Smartphone)"
-              className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700"
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-            />
+        <select
+          className="w-full p-3 rounded-lg bg-gray-800"
+          onChange={(e) => setTypeId(Number(e.target.value))}
+        >
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.en}
+            </option>
+          ))}
+        </select>
 
-            <div className="flex justify-between pt-4">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-700 rounded-lg"
-              >
-                ยกเลิก
-              </button>
+        <div className="flex justify-between pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 rounded-lg"
+          >
+            Cancel
+          </button>
 
-              <button
-                onClick={() => setStep("preview")}
-                className="px-4 py-2 bg-blue-500 text-black rounded-lg"
-              >
-                ดูตัวอย่าง
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === "preview" && (
-          <>
-            <ProductCard
-              product={{
-                id: 0,
-                ...formData,
-              }}
-            />
-
-            <div className="flex justify-between pt-4">
-              <button
-                onClick={() => setStep("form")}
-                className="px-4 py-2 bg-gray-700 rounded-lg"
-              >
-                แก้ไข
-              </button>
-
-              <button
-                onClick={handleConfirm}
-                className="px-4 py-2 bg-green-500 text-black rounded-lg"
-              >
-                ยืนยันเพิ่มสินค้า
-              </button>
-            </div>
-          </>
-        )}
+          <button
+            onClick={handleSubmit}
+            className="px-4 py-2 bg-green-500 text-black rounded-lg"
+          >
+            Upload
+          </button>
+        </div>
       </div>
     </div>
   );
