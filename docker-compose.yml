@@ -1,7 +1,9 @@
 services:
   mysql:
     image: mysql:8.0
-    restart: always
+    restart: unless-stopped
+    env_file:
+      - .env
     command: --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     environment:
@@ -14,8 +16,10 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
-      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
-      - ./mysql/logs:/var/log/mysql # เก็บ slow query log ออกมานอก container
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf   # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
+      - ./mysql/logs:/var/log/mysql               # เก็บ slow query log ออกมานอก container
+      - ./backup:/backup            
+                     # เก็บ backup ออกมานอก container
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -26,26 +30,19 @@ services:
   backup:
     image: mysql:8.0
     container_name: db_backup
-    restart: always
-    environment:
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
     volumes:
       - ./backup:/backup
     entrypoint: >
       sh -c "
       while true; do
-        echo 'Starting backup...';
-        mysqldump -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} \
-        --single-transaction \
-        --routines \
-        --triggers \
-        --events \
-        price_db > /backup/price_db_backup_$(date +%F_%H-%M-%S).sql;
-        echo 'Backup finished. Next backup in 24 hours.';
+        mysqldump -h mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > /backup/backup_$$(date +%Y-%m-%d_%H-%M-%S).sql &&
+        echo 'Backup successful' ||
+        echo 'Backup failed';
         sleep 86400;
       done
       "
