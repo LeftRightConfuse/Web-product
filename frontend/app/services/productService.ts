@@ -13,7 +13,7 @@ const CATEGORY_MAP: Record<number, string> = {
 };
 
 export async function getProducts(): Promise<Product[]> {
-  const res = await fetch("http://localhost:5001/products/getallproducts", {
+  const res = await fetch("http://172.16.8.219:5001/products/getallproducts", {
     cache: "no-store",
   });
 
@@ -36,7 +36,7 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function createProduct(formData: FormData) {
   const res = await fetch(
-    "http://localhost:5001/products/createproduct",
+    "http://172.16.8.219:5001/products/createproduct",
     {
       method: "POST",
       body: formData, 
