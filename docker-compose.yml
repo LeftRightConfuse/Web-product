@@ -4,7 +4,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: --character-set-server=utf8mb4
+    command: 
+      --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -18,8 +19,7 @@ services:
       - ./mysql:/docker-entrypoint-initdb.d
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf   # ใช้ my.cnf เพื่อปรับแต่งการตั้งค่า MySQL
       - ./mysql/logs:/var/log/mysql               # เก็บ slow query log ออกมานอก container
-      - ./backup:/backup            
-                     # เก็บ backup ออกมานอก container
+      - ./backup:/backup            # เก็บ backup ออกมานอก container
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -35,18 +35,24 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      TZ: Asia/Bangkok
     volumes:
       - ./backup:/backup
     entrypoint: >
       sh -c "
       while true; do
-        mysqldump -h mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > /backup/backup_$$(date +%Y-%m-%d_%H-%M-%S).sql &&
-        echo 'Backup successful' ||
-        echo 'Backup failed';
+        mysqldump -h mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE \
+        | gzip > /backup/backup_$$(date +%Y-%m-%d_%H-%M-%S).sql.gz &&
+        echo \"$$(date) Backup successful\" >> /backup/backup.log ||
+        echo \"$$(date) Backup failed\" >> /backup/backup.log;
+
+        find /backup -type f -name '*.sql.gz' -mtime +7 -delete;
+
         sleep 3600;
       done
       "
-
+      
   phpmyadmin:
     image: phpmyadmin
     restart: always
